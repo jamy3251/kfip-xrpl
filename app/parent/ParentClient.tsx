@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import AccountInfoWidget from "../components/AccountInfoWidget";
+import { Spinner } from "../components/Spinner";
 
 interface StatusResponse {
   configured: boolean;
@@ -135,13 +137,18 @@ export default function ParentClient() {
                 type="button"
                 onClick={onLock}
                 disabled={busy || stage !== "idle"}
-                className="w-full rounded-button bg-fg px-6 py-4 text-[15px] font-bold text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-button bg-fg px-6 py-4 text-[15px] font-bold text-bg transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {busy
-                  ? "XRPL Escrow 잠그는 중…"
-                  : stage === "idle"
-                    ? "한도 잠그기 (EscrowCreate)"
-                    : "이미 잠긴 한도 있음"}
+                {busy ? (
+                  <>
+                    <Spinner size={16} />
+                    <span>XRPL Escrow 잠그는 중…</span>
+                  </>
+                ) : stage === "idle" ? (
+                  "한도 잠그기 (EscrowCreate)"
+                ) : (
+                  "이미 잠긴 한도 있음"
+                )}
               </button>
 
               {stage !== "idle" ? (
@@ -155,6 +162,22 @@ export default function ParentClient() {
               ) : null}
 
               {result ? <ResultBlock result={result} /> : null}
+            </Section>
+
+            <Section title="XRPL 계정 상태 (실시간)">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <AccountInfoWidget
+                  label="부모 (베트남)"
+                  address={status?.parentAddress}
+                />
+                <AccountInfoWidget
+                  label="자녀 (한국)"
+                  address={status?.childAddress}
+                />
+              </div>
+              <p className="mt-3 text-[11px] text-text-subtle">
+                XRPL <code className="font-mono">account_info</code> 8초 폴링. Sequence·OwnerCount·Reserve는 메인넷과 동일 의미.
+              </p>
             </Section>
 
             {status?.escrow ? (

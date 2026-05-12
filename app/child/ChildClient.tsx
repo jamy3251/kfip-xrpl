@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Spinner } from "../components/Spinner";
 
 interface StatusResponse {
   configured: boolean;
@@ -172,9 +173,16 @@ function StageBlock({
             type="button"
             onClick={onFinish}
             disabled={busy}
-            className="mt-5 w-full rounded-button bg-fg px-6 py-4 text-[15px] font-bold text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-button bg-fg px-6 py-4 text-[15px] font-bold text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? "XRPL EscrowFinish 중…" : "한도 받기 (EscrowFinish)"}
+            {busy ? (
+              <>
+                <Spinner size={16} />
+                <span>XRPL EscrowFinish 중…</span>
+              </>
+            ) : (
+              "한도 받기 (EscrowFinish)"
+            )}
           </button>
         </section>
 
@@ -212,8 +220,9 @@ function StageBlock({
             ))}
           </div>
           {busy ? (
-            <p className="mt-3 text-center text-[12px] text-text-muted">
-              XRPL Payment 전송 중…
+            <p className="mt-3 inline-flex w-full items-center justify-center gap-2 text-center text-[12px] text-text-muted">
+              <Spinner size={12} />
+              <span>XRPL Payment 전송 중…</span>
             </p>
           ) : null}
         </section>

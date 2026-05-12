@@ -68,6 +68,10 @@ XRPL Testnet
 
 KFIP Milgram 페이지에 임베드할 라이브 URL을 만드는 과정입니다.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jamy3251/kfip-xrpl&env=KFIP_PARENT_SEED,KFIP_PARENT_ADDRESS,KFIP_CHILD_SEED,KFIP_CHILD_ADDRESS,KFIP_MERCHANT_ADDRESS&envDescription=Run+bun+run+setup%3Awallets+locally+then+paste+the+output&project-name=kfip-xrpl)
+
+⚠️ 위 버튼은 GitHub 리포 `jamy3251/kfip-xrpl`이 존재한다고 가정. 다른 이름으로 푸시하면 README 갱신.
+
 ### 1. GitHub 리포 만들고 푸시
 
 ```bash

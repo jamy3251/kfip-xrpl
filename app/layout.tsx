@@ -18,9 +18,23 @@ export const metadata: Metadata = {
   description:
     "베트남 부모님이 보낸 돈, 3초 안에 한국 카드 잔액으로. XRPL 위에 세운 가족 송금·결제 인프라.",
   openGraph: {
-    title: "XRP·Family",
-    description: "XRPL 기반 외국인 유학생·근로자 가족 송금·결제 통합 지갑",
+    title: "XRP·Family — XRPL 가족 송금·결제",
+    description:
+      "베트남 부모님이 보낸 돈, 3.2초 안에 한국 카드 잔액으로. KFIP 2026 지원 프로젝트.",
     type: "website",
+    locale: "ko_KR",
+    siteName: "XRP·Family",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "XRP·Family — XRPL 가족 송금·결제",
+    description:
+      "Mẹ đã gửi 200,000 KRW · 3.2초 안에 한국 카드 잔액으로",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+    ],
   },
 };
 

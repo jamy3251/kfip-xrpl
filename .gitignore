@@ -51,3 +51,6 @@ next-env.d.ts
 # secrets / keys
 /secrets
 *.key
+
+# local demo state (persisted across `bun dev` restarts, not committed)
+.kfip-state.json
