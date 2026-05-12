@@ -25,6 +25,24 @@ import {
   XRPL_TESTNET_EXPLORER,
   krwToXrp,
 } from "./config";
+import { isRetryable } from "./xrpl-errors";
+
+/**
+ * Run an XRPL operation with one retry on transient failures
+ * (tooBusy, timeout, terRETRY-class results).
+ */
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    const message = (err as Error).message ?? "";
+    if (isRetryable({ message })) {
+      await new Promise((r) => setTimeout(r, 1500));
+      return await fn();
+    }
+    throw err;
+  }
+}
 
 let cachedClient: Client | null = null;
 
@@ -79,19 +97,21 @@ export interface CreateEscrowParams {
 export async function createMonthlyEscrow(
   params: CreateEscrowParams,
 ): Promise<TxResponse<EscrowCreate>> {
-  const client = await getClient();
   const xrp = krwToXrp(params.amountKrw);
-  return client.submitAndWait(
-    {
-      TransactionType: "EscrowCreate",
-      Account: params.parent.classicAddress,
-      Destination: params.childAddress,
-      Amount: xrpToDrops(xrp.toFixed(6)),
-      Condition: params.condition,
-      CancelAfter: params.cancelAfter,
-    },
-    { wallet: params.parent },
-  );
+  return withRetry(async () => {
+    const client = await getClient();
+    return client.submitAndWait(
+      {
+        TransactionType: "EscrowCreate",
+        Account: params.parent.classicAddress,
+        Destination: params.childAddress,
+        Amount: xrpToDrops(xrp.toFixed(6)),
+        Condition: params.condition,
+        CancelAfter: params.cancelAfter,
+      },
+      { wallet: params.parent },
+    );
+  });
 }
 
 export interface FinishEscrowParams {
@@ -105,18 +125,20 @@ export interface FinishEscrowParams {
 export async function finishEscrow(
   params: FinishEscrowParams,
 ): Promise<TxResponse<EscrowFinish>> {
-  const client = await getClient();
-  return client.submitAndWait(
-    {
-      TransactionType: "EscrowFinish",
-      Account: params.child.classicAddress,
-      Owner: params.parentAddress,
-      OfferSequence: params.offerSequence,
-      Condition: params.condition,
-      Fulfillment: params.fulfillment,
-    },
-    { wallet: params.child },
-  );
+  return withRetry(async () => {
+    const client = await getClient();
+    return client.submitAndWait(
+      {
+        TransactionType: "EscrowFinish",
+        Account: params.child.classicAddress,
+        Owner: params.parentAddress,
+        OfferSequence: params.offerSequence,
+        Condition: params.condition,
+        Fulfillment: params.fulfillment,
+      },
+      { wallet: params.child },
+    );
+  });
 }
 
 export interface MerchantPaymentParams {
@@ -130,30 +152,32 @@ export interface MerchantPaymentParams {
 export async function sendMerchantPayment(
   params: MerchantPaymentParams,
 ): Promise<TxResponse<Payment>> {
-  const client = await getClient();
   const xrp = krwToXrp(params.amountKrw);
-  return client.submitAndWait(
-    {
-      TransactionType: "Payment",
-      Account: params.child.classicAddress,
-      Destination: params.merchantAddress,
-      Amount: xrpToDrops(xrp.toFixed(6)),
-      ...(params.memo
-        ? {
-            Memos: [
-              {
-                Memo: {
-                  MemoData: Buffer.from(params.memo, "utf-8")
-                    .toString("hex")
-                    .toUpperCase(),
+  return withRetry(async () => {
+    const client = await getClient();
+    return client.submitAndWait(
+      {
+        TransactionType: "Payment",
+        Account: params.child.classicAddress,
+        Destination: params.merchantAddress,
+        Amount: xrpToDrops(xrp.toFixed(6)),
+        ...(params.memo
+          ? {
+              Memos: [
+                {
+                  Memo: {
+                    MemoData: Buffer.from(params.memo, "utf-8")
+                      .toString("hex")
+                      .toUpperCase(),
+                  },
                 },
-              },
-            ],
-          }
-        : {}),
-    },
-    { wallet: params.child },
-  );
+              ],
+            }
+          : {}),
+      },
+      { wallet: params.child },
+    );
+  });
 }
 
 /** Query the current XRP balance (in drops) for an account. */

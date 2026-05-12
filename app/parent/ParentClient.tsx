@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import AccountInfoWidget from "../components/AccountInfoWidget";
 import { Spinner } from "../components/Spinner";
+import { showToast } from "../components/Toast";
 
 interface StatusResponse {
   configured: boolean;
@@ -66,9 +67,24 @@ export default function ParentClient() {
       });
       const data = (await r.json()) as CreateResponse;
       setResult(data);
+      if (data.ok) {
+        showToast({
+          type: "success",
+          message: `한도 ${data.amountKrw?.toLocaleString("ko-KR")}원 잠금 완료`,
+          detail: data.txHash ? `tx: ${data.txHash.slice(0, 16)}…` : undefined,
+        });
+      } else {
+        showToast({
+          type: "error",
+          message: "EscrowCreate 실패",
+          detail: data.error,
+        });
+      }
       await refreshStatus();
     } catch (e) {
-      setResult({ ok: false, error: (e as Error).message });
+      const msg = (e as Error).message;
+      setResult({ ok: false, error: msg });
+      showToast({ type: "error", message: "네트워크 오류", detail: msg });
     } finally {
       setBusy(false);
     }

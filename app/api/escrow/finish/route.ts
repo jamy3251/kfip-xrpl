@@ -16,6 +16,7 @@ import {
   explorerTxUrl,
 } from "@/lib/xrpl";
 import { getState, setEscrowActive } from "@/lib/demo-state";
+import { humanizeXrplError } from "@/lib/xrpl-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,11 @@ export async function POST() {
 
     if (engineResult && engineResult !== "tesSUCCESS") {
       return NextResponse.json(
-        { ok: false, error: `EscrowFinish failed on chain: ${engineResult}` },
+        {
+          ok: false,
+          error: humanizeXrplError({ engineResult }),
+          engineResult,
+        },
         { status: 502 },
       );
     }
@@ -78,7 +83,10 @@ export async function POST() {
   } catch (err) {
     console.error("[escrow/finish] failed:", err);
     return NextResponse.json(
-      { ok: false, error: (err as Error).message ?? "Unknown error" },
+      {
+        ok: false,
+        error: humanizeXrplError({ message: (err as Error).message }),
+      },
       { status: 502 },
     );
   }

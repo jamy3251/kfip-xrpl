@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Spinner } from "../components/Spinner";
+import { showToast } from "../components/Toast";
+import QrScanner, { type QrParseResult } from "../components/QrScanner";
 
 interface StatusResponse {
   configured: boolean;
@@ -41,6 +43,8 @@ export default function ChildClient() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [lastAction, setLastAction] = useState<ActionResponse | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [pendingScan, setPendingScan] = useState<QrParseResult | null>(null);
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -60,8 +64,20 @@ export default function ChildClient() {
     setLastAction(null);
     try {
       const r = await fetch("/api/escrow/finish", { method: "POST" });
-      setLastAction((await r.json()) as ActionResponse);
+      const data = (await r.json()) as ActionResponse;
+      setLastAction(data);
+      if (data.ok) {
+        showToast({
+          type: "success",
+          message: "한도 수령 완료",
+          detail: data.txHash ? `tx: ${data.txHash.slice(0, 16)}…` : undefined,
+        });
+      } else {
+        showToast({ type: "error", message: "EscrowFinish 실패", detail: data.error });
+      }
       await refreshStatus();
+    } catch (e) {
+      showToast({ type: "error", message: "네트워크 오류", detail: (e as Error).message });
     } finally {
       setBusy(false);
     }
@@ -76,11 +92,35 @@ export default function ChildClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ label, amountKrw }),
       });
-      setLastAction((await r.json()) as ActionResponse);
+      const data = (await r.json()) as ActionResponse;
+      setLastAction(data);
+      if (data.ok) {
+        showToast({
+          type: "success",
+          message: `${label} 결제 완료 · ${amountKrw.toLocaleString("ko-KR")}원`,
+          detail: data.txHash ? `tx: ${data.txHash.slice(0, 16)}…` : undefined,
+        });
+      } else {
+        showToast({ type: "error", message: "Payment 실패", detail: data.error });
+      }
       await refreshStatus();
+    } catch (e) {
+      showToast({ type: "error", message: "네트워크 오류", detail: (e as Error).message });
     } finally {
       setBusy(false);
     }
+  };
+
+  const onScanned = useCallback((parsed: QrParseResult) => {
+    setScanning(false);
+    setPendingScan(parsed);
+  }, []);
+
+  const confirmScannedPayment = async () => {
+    if (!pendingScan) return;
+    const { label, amountKrw } = pendingScan;
+    setPendingScan(null);
+    await onPay(label, amountKrw);
   };
 
   const configured = status?.configured ?? false;
@@ -112,10 +152,66 @@ export default function ChildClient() {
             onFinish={onFinish}
             onPay={onPay}
             lastAction={lastAction}
+            onScanRequest={() => setScanning(true)}
           />
         )}
       </div>
+
+      {scanning ? (
+        <QrScanner onScan={onScanned} onCancel={() => setScanning(false)} />
+      ) : null}
+
+      {pendingScan ? (
+        <ScanConfirm
+          parsed={pendingScan}
+          onConfirm={confirmScannedPayment}
+          onCancel={() => setPendingScan(null)}
+        />
+      ) : null}
     </main>
+  );
+}
+
+function ScanConfirm({
+  parsed,
+  onConfirm,
+  onCancel,
+}: {
+  parsed: QrParseResult;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-fg/60 p-5">
+      <div className="w-full max-w-[400px] rounded-card border border-border bg-bg p-6 shadow-[0_24px_48px_rgba(10,10,10,0.2)]">
+        <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-text-subtle">
+          가맹점 결제 확인
+        </div>
+        <div className="text-[20px] font-bold text-fg">{parsed.label}</div>
+        <div className="mt-2 font-mono tabular text-[28px] font-extrabold text-fg">
+          {parsed.amountKrw.toLocaleString("ko-KR")}원
+        </div>
+        <div className="mt-3 break-all font-mono text-[10px] text-text-subtle">
+          {parsed.raw}
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-button border border-border px-4 py-3 text-[14px] font-semibold text-fg hover:border-text-muted"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="rounded-button bg-fg px-4 py-3 text-[14px] font-bold text-bg hover:opacity-90"
+          >
+            결제
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -126,6 +222,7 @@ function StageBlock({
   onFinish,
   onPay,
   lastAction,
+  onScanRequest,
 }: {
   stage: "idle" | "created" | "active" | "expired";
   status: StatusResponse;
@@ -133,6 +230,7 @@ function StageBlock({
   onFinish: () => Promise<void>;
   onPay: (label: string, amountKrw: number) => Promise<void>;
   lastAction: ActionResponse | null;
+  onScanRequest: () => void;
 }) {
   if (stage === "idle") {
     return (
@@ -199,9 +297,21 @@ function StageBlock({
       <>
         <BalanceCard remaining={remaining} limit={total} used={usedKrw} />
 
+        <button
+          type="button"
+          onClick={onScanRequest}
+          disabled={busy}
+          className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-button bg-accent px-4 py-4 text-[15px] font-bold text-bg transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M3 7V4a1 1 0 0 1 1-1h3M21 7V4a1 1 0 0 0-1-1h-3M3 17v3a1 1 0 0 0 1 1h3M21 17v3a1 1 0 0 1-1 1h-3M7 12h10M7 8h2M15 8h2M7 16h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+          </svg>
+          QR 스캔 결제
+        </button>
+
         <section className="mt-6">
           <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-text-subtle">
-            가맹점 결제
+            가맹점 결제 (빠른 버튼)
           </h2>
           <div className="grid grid-cols-2 gap-3">
             {QUICK_PAYMENTS.map((p) => (
@@ -210,7 +320,7 @@ function StageBlock({
                 type="button"
                 onClick={() => onPay(p.label, p.amountKrw)}
                 disabled={busy || remaining < p.amountKrw}
-                className="rounded-button border border-border bg-bg px-4 py-4 text-left transition-colors hover:border-accent hover:bg-accent-bg disabled:cursor-not-allowed disabled:opacity-40"
+                className="min-h-[72px] rounded-button border border-border bg-bg px-4 py-4 text-left transition-colors active:scale-[0.98] hover:border-accent hover:bg-accent-bg disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <div className="text-[14px] font-semibold text-fg">{p.label}</div>
                 <div className="mt-1 font-mono tabular text-[15px] text-text-muted">
@@ -225,6 +335,9 @@ function StageBlock({
               <span>XRPL Payment 전송 중…</span>
             </p>
           ) : null}
+          <p className="mt-4 text-center text-[11px] text-text-subtle">
+            QR 스캔 테스트: <a href="/merchant" target="_blank" className="text-accent hover:underline">/merchant</a>에서 가맹점 QR 표시 → 다른 기기 카메라로 스캔
+          </p>
         </section>
 
         {lastAction ? <ActionResult action={lastAction} kind="payment" /> : null}

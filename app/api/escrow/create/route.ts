@@ -21,6 +21,7 @@ import {
   explorerTxUrl,
 } from "@/lib/xrpl";
 import { setEscrowCreated, getState } from "@/lib/demo-state";
+import { humanizeXrplError } from "@/lib/xrpl-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -90,7 +91,11 @@ export async function POST(req: Request) {
 
     if (engineResult && engineResult !== "tesSUCCESS") {
       return NextResponse.json(
-        { ok: false, error: `EscrowCreate failed on chain: ${engineResult}` },
+        {
+          ok: false,
+          error: humanizeXrplError({ engineResult }),
+          engineResult,
+        },
         { status: 502 },
       );
     }
@@ -124,7 +129,10 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("[escrow/create] failed:", err);
     return NextResponse.json(
-      { ok: false, error: (err as Error).message ?? "Unknown error" },
+      {
+        ok: false,
+        error: humanizeXrplError({ message: (err as Error).message }),
+      },
       { status: 502 },
     );
   }
