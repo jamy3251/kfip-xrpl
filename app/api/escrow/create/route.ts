@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const existing = getState();
+  const existing = await getState();
   if (existing.stage !== "idle") {
     return NextResponse.json(
       {
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
       );
     }
 
-    setEscrowCreated({
+    await setEscrowCreated({
       parentAddress: addrs.parent as string,
       childAddress: addrs.child as string,
       offerSequence: sequence,

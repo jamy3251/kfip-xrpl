@@ -12,6 +12,6 @@ import { resetDemo } from "@/lib/demo-state";
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-  resetDemo();
+  await resetDemo();
   return NextResponse.json({ ok: true });
 }

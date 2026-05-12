@@ -13,6 +13,7 @@ import {
   dropsToKrwAt,
 } from "@/lib/config";
 import { getState } from "@/lib/demo-state";
+import { backendName } from "@/lib/kv-store";
 import { getBalanceDrops } from "@/lib/xrpl";
 import { getXrpKrwRate } from "@/lib/rate";
 
@@ -21,7 +22,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const ready = readyForXrpl();
   const addrs = readDemoAddresses();
-  const state = getState();
+  const state = await getState();
   const rate = await getXrpKrwRate();
 
   if (!ready.ok) {
@@ -34,6 +35,7 @@ export async function GET() {
         payments: state.payments,
         defaultLimitKrw: DEFAULT_MONTHLY_LIMIT_KRW,
         rate,
+        backend: backendName(),
       },
       { status: 200 },
     );
@@ -71,5 +73,6 @@ export async function GET() {
     childBalanceKrw,
     defaultLimitKrw: DEFAULT_MONTHLY_LIMIT_KRW,
     rate,
+    backend: backendName(),
   });
 }

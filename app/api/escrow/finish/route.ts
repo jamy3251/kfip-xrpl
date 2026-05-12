@@ -28,7 +28,7 @@ export async function POST() {
     );
   }
 
-  const state = getState();
+  const state = await getState();
   if (state.stage !== "created" || !state.escrow) {
     return NextResponse.json(
       {
@@ -68,7 +68,7 @@ export async function POST() {
       );
     }
 
-    setEscrowActive(hash);
+    await setEscrowActive(hash);
 
     return NextResponse.json({
       ok: true,

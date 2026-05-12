@@ -21,6 +21,7 @@ interface StatusResponse {
   childAddress?: string;
   parentBalanceKrw?: number | null;
   defaultLimitKrw: number;
+  backend?: "kv" | "file";
 }
 
 interface CreateResponse {
@@ -90,9 +91,19 @@ export default function ParentClient() {
         </Link>
 
         <header className="mt-6 mb-10">
-          <span className="inline-flex items-center gap-2 rounded-pill border border-accent-border bg-accent-bg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent-dark">
-            부모 뷰 · Phụ huynh
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-pill border border-accent-border bg-accent-bg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent-dark">
+              부모 뷰 · Phụ huynh
+            </span>
+            {status?.backend ? (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-pill border border-border-subtle bg-bg px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-text-muted"
+                title="Demo state storage backend"
+              >
+                state · {status.backend === "kv" ? "Vercel KV" : "local file"}
+              </span>
+            ) : null}
+          </div>
           <h1 className="mt-4 text-[36px] font-extrabold tracking-[-1px] leading-tight md:text-[44px]">
             자녀 앞으로 이번 달 한도를 잠가두세요
           </h1>

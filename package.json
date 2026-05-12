@@ -10,6 +10,7 @@
     "setup:wallets": "bun scripts/setup-wallets.ts"
   },
   "dependencies": {
+    "@vercel/kv": "^3.0.0",
     "five-bells-condition": "^5.0.1",
     "next": "16.2.6",
     "qrcode": "^1.5.4",

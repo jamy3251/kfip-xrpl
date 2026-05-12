@@ -98,6 +98,16 @@ KFIP_MERCHANT_ADDRESS
 
 ⚠️ 이 seed는 testnet 전용이라 노출돼도 실손해는 없지만, 다른 사람이 데모를 망가뜨릴 수 있으니 production만 쓰는 게 안전합니다. 마감 후 새 seed 발급 권장.
 
+### 3.5. (권장) Vercel KV 활성화
+
+서버리스 콜드스타트에서 데모 상태가 유실되지 않도록 KV 백엔드 추가:
+
+1. Vercel 대시보드 → Project → Storage → **Create Database** → Upstash Redis (또는 Vercel KV) 선택, 무료 티어
+2. 통합 활성화 시 Vercel이 `KV_REST_API_URL`, `KV_REST_API_TOKEN` 자동 주입
+3. 재배포 후 `/parent` 화면 상단 pill이 `state · Vercel KV`로 바뀜 (이전엔 `state · local file`)
+
+설정 안 해도 데모 작동함 — 다만 Vercel 콜드스타트 시 escrow 정보 잃을 위험. 시연 직전 KV 활성 권장.
+
 ### 4. 배포 후
 
 자동 도메인: `https://kfip-xrpl-jamy3251.vercel.app` 비슷한 형태.

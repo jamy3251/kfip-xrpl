@@ -1,18 +1,14 @@
 /**
- * In-memory demo state with optional disk persistence.
+ * Demo state — KV-backed.
  *
- * v0.4: writes to `.kfip-state.json` (cwd, gitignored) on every mutation so
- *       state survives `bun dev` restarts. Useful while recording the demo
- *       video — you can stop the server mid-flow and pick up where you left.
+ * Stored under a single key in either Vercel KV (production) or the local
+ * `.kfip-state.json` file (dev). State machine: idle → created → active.
+ * Single global escrow at a time (v0.6 will key by user).
  *
- * v0.5: migrate to Vercel KV / Upstash for serverless cold-start survival.
- *       The interface here stays — only the storage backend swaps.
- *
- * Architecture rule: server-only module. Never import from client components.
+ * Architecture rule: server-only. Never import from client components.
  */
 import "server-only";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { kvGet, kvSet } from "./kv-store";
 
 export type EscrowStage = "idle" | "created" | "active" | "expired";
 
@@ -40,71 +36,58 @@ export interface PaymentEntry {
   at: number;
 }
 
-const initialState: DemoState = {
+const STATE_KEY = "kfip:demo:v1";
+
+const EMPTY_STATE: DemoState = {
   stage: "idle",
   escrow: null,
   payments: [],
 };
 
-const STATE_FILE = resolve(process.cwd(), ".kfip-state.json");
-
-function loadFromDisk(): DemoState {
-  try {
-    if (!existsSync(STATE_FILE)) return { ...initialState, payments: [] };
-    const raw = readFileSync(STATE_FILE, "utf-8");
-    const parsed = JSON.parse(raw) as DemoState;
-    // Minimal shape check — if anyone hand-edits the file we want to recover.
-    if (
-      parsed &&
-      typeof parsed === "object" &&
-      typeof parsed.stage === "string" &&
-      Array.isArray(parsed.payments)
-    ) {
-      return parsed;
-    }
-  } catch (err) {
-    console.warn("[demo-state] could not load from disk, starting fresh:", err);
+export async function getState(): Promise<DemoState> {
+  const stored = await kvGet<DemoState>(STATE_KEY);
+  if (!stored || typeof stored.stage !== "string") {
+    return { ...EMPTY_STATE };
   }
-  return { ...initialState, payments: [] };
-}
-
-function persist(s: DemoState): void {
-  try {
-    mkdirSync(dirname(STATE_FILE), { recursive: true });
-    writeFileSync(STATE_FILE, JSON.stringify(s, null, 2), "utf-8");
-  } catch (err) {
-    // Don't crash on persist failure — in-memory is still authoritative.
-    console.warn("[demo-state] persist failed:", err);
-  }
-}
-
-let state: DemoState = loadFromDisk();
-
-export function getState(): DemoState {
-  return state;
-}
-
-export function setEscrowCreated(escrow: NonNullable<DemoState["escrow"]>): void {
-  state = { stage: "created", escrow, payments: [] };
-  persist(state);
-}
-
-export function setEscrowActive(finishTxHash: string): void {
-  if (!state.escrow) return;
-  state = {
-    ...state,
-    stage: "active",
-    escrow: { ...state.escrow, finishTxHash },
+  // Defensive defaults for fields that may be missing in older stored objects.
+  return {
+    stage: stored.stage,
+    escrow: stored.escrow ?? null,
+    payments: Array.isArray(stored.payments) ? stored.payments : [],
   };
-  persist(state);
 }
 
-export function recordPayment(entry: PaymentEntry): void {
-  state = { ...state, payments: [entry, ...state.payments] };
-  persist(state);
+export async function setEscrowCreated(
+  escrow: NonNullable<DemoState["escrow"]>,
+): Promise<void> {
+  const next: DemoState = {
+    stage: "created",
+    escrow,
+    payments: [],
+  };
+  await kvSet(STATE_KEY, next);
 }
 
-export function resetDemo(): void {
-  state = { ...initialState, payments: [] };
-  persist(state);
+export async function setEscrowActive(finishTxHash: string): Promise<void> {
+  const cur = await getState();
+  if (!cur.escrow) return;
+  const next: DemoState = {
+    ...cur,
+    stage: "active",
+    escrow: { ...cur.escrow, finishTxHash },
+  };
+  await kvSet(STATE_KEY, next);
+}
+
+export async function recordPayment(entry: PaymentEntry): Promise<void> {
+  const cur = await getState();
+  const next: DemoState = {
+    ...cur,
+    payments: [entry, ...cur.payments],
+  };
+  await kvSet(STATE_KEY, next);
+}
+
+export async function resetDemo(): Promise<void> {
+  await kvSet(STATE_KEY, { ...EMPTY_STATE });
 }

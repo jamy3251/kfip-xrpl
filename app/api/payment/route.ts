@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const state = getState();
+  const state = await getState();
   if (state.stage !== "active") {
     return NextResponse.json(
       {
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
       );
     }
 
-    recordPayment({
+    await recordPayment({
       label,
       amountKrw,
       txHash: hash,
