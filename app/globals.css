@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/*
+  KFIP Design Tokens — Variant D-remix
+  Authoritative source: ../DESIGN.md
+  Approved: 2026-05-12
+*/
+
+@theme {
+  --color-bg: #ffffff;
+  --color-fg: #0a0a0a;
+  --color-muted: #fafbfc;
+  --color-border: #e8ecef;
+  --color-border-subtle: #f0f0f0;
+  --color-text-muted: #666666;
+  --color-text-subtle: #999999;
+
+  --color-accent: #00aae4;
+  --color-accent-bg: #f7fbfd;
+  --color-accent-border: #d6eef7;
+  --color-accent-dark: #0077a8;
+  --color-gold: #f7b500;
+
+  --color-success: #0d9c63;
+  --color-highlight: #7a4ec9;
+
+  --font-sans: "Noto Sans KR", "Pretendard", var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-button: 12px;
+  --radius-card: 14px;
+  --radius-input: 8px;
+  --radius-pill: 999px;
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "ss01", "cv02", "cv11";
+}
+
+/* tabular numerics for any explicit .tabular class */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* live pulse for "XRPL Testnet · Live" indicator */
+@keyframes kfip-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.animate-kfip-pulse {
+  animation: kfip-pulse 1.5s infinite;
+}

@@ -1,3 +1,5 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
 # dependencies
 /node_modules
 /.pnp
@@ -20,8 +22,8 @@
 
 # misc
 .DS_Store
-*.pem
 Thumbs.db
+*.pem
 
 # debug
 npm-debug.log*
@@ -48,5 +50,4 @@ next-env.d.ts
 
 # secrets / keys
 /secrets
-*.pem
 *.key
