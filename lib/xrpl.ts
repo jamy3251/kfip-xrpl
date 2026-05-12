@@ -1,16 +1,14 @@
 /**
  * KFIP XRPL helpers — server-side only.
  *
- * v0.1: skeleton. Function signatures and minimal connection logic are in place
- *       but the EscrowCreate / EscrowFinish flow is not wired into UI yet. The
- *       hero terminal on the landing page uses hardcoded data.
- * v0.2: parent/child route wiring will call these functions via API routes.
- * v0.3: switch from polled balances to a live WebSocket subscription that feeds
- *       the hero terminal.
+ * v0.2: EscrowCreate + EscrowFinish + Payment all wired. UI calls these via
+ *       API routes in app/api/. The hero terminal still shows mocked data;
+ *       v0.3 will swap it for a live WebSocket subscription.
  *
  * Architecture rule: NEVER import this module from a client component. All
  * signing happens server-side. Seed material lives in env vars only.
  */
+import "server-only";
 import {
   Client,
   Wallet,
@@ -18,10 +16,15 @@ import {
   type TxResponse,
   type EscrowCreate,
   type EscrowFinish,
+  type Payment,
 } from "xrpl";
 import * as fiveBellsCondition from "five-bells-condition";
 import { randomBytes } from "node:crypto";
-import { XRPL_TESTNET_URL, XRPL_TESTNET_EXPLORER } from "./config";
+import {
+  XRPL_TESTNET_URL,
+  XRPL_TESTNET_EXPLORER,
+  krwToXrp,
+} from "./config";
 
 let cachedClient: Client | null = null;
 
@@ -40,7 +43,7 @@ export function walletFromSeed(seed: string): Wallet {
 
 /**
  * Ask the testnet faucet to fund a fresh wallet. Returns the funded Wallet.
- * Use only during local dev / first-time setup. Faucet is rate-limited.
+ * Use only during dev / one-off setup. Faucet is rate-limited.
  */
 export async function fundFromFaucet(): Promise<Wallet> {
   const client = await getClient();
@@ -53,13 +56,9 @@ export async function fundFromFaucet(): Promise<Wallet> {
  *  - `condition`  → published on the EscrowCreate, anyone can see
  *  - `fulfillment` → secret preimage, only the child holds. Required to
  *                    redeem via EscrowFinish.
- *
- * NOTE: 32-byte preimage gives 256-bit security. The 5-byte preimage shown in
- * some XRPL examples is for compactness only and is NOT acceptable here.
  */
 export function makeCondition(): { condition: string; fulfillment: string } {
   const preimage = randomBytes(32);
-  // five-bells-condition returns the BER-encoded condition + fulfillment as hex
   const fulfillment = new fiveBellsCondition.PreimageSha256();
   fulfillment.setPreimage(preimage);
   return {
@@ -72,25 +71,16 @@ export interface CreateEscrowParams {
   parent: Wallet;
   childAddress: string;
   amountKrw: number;
-  /** Hex condition from `makeCondition`. */
   condition: string;
   /** Unix seconds; after this the parent can reclaim unspent funds. */
   cancelAfter: number;
 }
 
-/**
- * Submit an EscrowCreate from parent → child.
- * Returns the submission response so callers can extract the Sequence number.
- * v0.2 will wire this from the /parent route.
- */
 export async function createMonthlyEscrow(
   params: CreateEscrowParams,
 ): Promise<TxResponse<EscrowCreate>> {
   const client = await getClient();
-  // Convert KRW amount to drops via the mock rate.
-  // v0.3: use a live oracle.
-  const { MOCK_XRP_KRW_RATE } = await import("./config");
-  const xrp = params.amountKrw / MOCK_XRP_KRW_RATE;
+  const xrp = krwToXrp(params.amountKrw);
   return client.submitAndWait(
     {
       TransactionType: "EscrowCreate",
@@ -107,16 +97,11 @@ export async function createMonthlyEscrow(
 export interface FinishEscrowParams {
   child: Wallet;
   parentAddress: string;
-  /** EscrowCreate Sequence number (from createMonthlyEscrow response). */
   offerSequence: number;
-  /** Hex fulfillment from `makeCondition`. */
   fulfillment: string;
   condition: string;
 }
 
-/**
- * Submit an EscrowFinish from the child, releasing funds to themselves.
- */
 export async function finishEscrow(
   params: FinishEscrowParams,
 ): Promise<TxResponse<EscrowFinish>> {
@@ -134,7 +119,55 @@ export async function finishEscrow(
   );
 }
 
-/** Helper: explorer link for any tx hash (testnet). */
+export interface MerchantPaymentParams {
+  child: Wallet;
+  merchantAddress: string;
+  amountKrw: number;
+  /** Free-form memo (max ~1KB) e.g. "편의점 결제". */
+  memo?: string;
+}
+
+export async function sendMerchantPayment(
+  params: MerchantPaymentParams,
+): Promise<TxResponse<Payment>> {
+  const client = await getClient();
+  const xrp = krwToXrp(params.amountKrw);
+  return client.submitAndWait(
+    {
+      TransactionType: "Payment",
+      Account: params.child.classicAddress,
+      Destination: params.merchantAddress,
+      Amount: xrpToDrops(xrp.toFixed(6)),
+      ...(params.memo
+        ? {
+            Memos: [
+              {
+                Memo: {
+                  MemoData: Buffer.from(params.memo, "utf-8")
+                    .toString("hex")
+                    .toUpperCase(),
+                },
+              },
+            ],
+          }
+        : {}),
+    },
+    { wallet: params.child },
+  );
+}
+
+/** Query the current XRP balance (in drops) for an account. */
+export async function getBalanceDrops(address: string): Promise<string> {
+  const client = await getClient();
+  const info = await client.request({
+    command: "account_info",
+    account: address,
+    ledger_index: "validated",
+  });
+  return info.result.account_data.Balance;
+}
+
+/** Explorer link for any tx hash (testnet). */
 export function explorerTxUrl(hash: string): string {
   return `${XRPL_TESTNET_EXPLORER}/transactions/${hash}`;
 }
