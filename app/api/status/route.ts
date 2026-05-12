@@ -2,17 +2,19 @@
  * GET /api/status
  *
  * Returns the demo's current escrow stage, parent/child balances (drops + KRW),
- * and recent payments. Used by both /parent and /child views to render state.
+ * the active XRP→KRW rate, and recent payments. Used by both /parent and /child
+ * views to render state.
  */
 import { NextResponse } from "next/server";
 import {
   readDemoAddresses,
   readyForXrpl,
-  dropsToKrw,
   DEFAULT_MONTHLY_LIMIT_KRW,
+  dropsToKrwAt,
 } from "@/lib/config";
 import { getState } from "@/lib/demo-state";
 import { getBalanceDrops } from "@/lib/xrpl";
+import { getXrpKrwRate } from "@/lib/rate";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,7 @@ export async function GET() {
   const ready = readyForXrpl();
   const addrs = readDemoAddresses();
   const state = getState();
+  const rate = await getXrpKrwRate();
 
   if (!ready.ok) {
     return NextResponse.json(
@@ -30,6 +33,7 @@ export async function GET() {
         escrow: state.escrow,
         payments: state.payments,
         defaultLimitKrw: DEFAULT_MONTHLY_LIMIT_KRW,
+        rate,
       },
       { status: 200 },
     );
@@ -40,10 +44,16 @@ export async function GET() {
   let childBalanceKrw: number | null = null;
   try {
     if (addrs.parent) {
-      parentBalanceKrw = dropsToKrw(await getBalanceDrops(addrs.parent));
+      parentBalanceKrw = dropsToKrwAt(
+        await getBalanceDrops(addrs.parent),
+        rate.rate,
+      );
     }
     if (addrs.child) {
-      childBalanceKrw = dropsToKrw(await getBalanceDrops(addrs.child));
+      childBalanceKrw = dropsToKrwAt(
+        await getBalanceDrops(addrs.child),
+        rate.rate,
+      );
     }
   } catch (err) {
     console.warn("[status] balance fetch failed:", err);
@@ -60,5 +70,6 @@ export async function GET() {
     parentBalanceKrw,
     childBalanceKrw,
     defaultLimitKrw: DEFAULT_MONTHLY_LIMIT_KRW,
+    rate,
   });
 }

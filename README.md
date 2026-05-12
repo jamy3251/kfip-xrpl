@@ -64,13 +64,54 @@ XRPL Testnet
 
 핵심 원칙: **private key는 절대 클라이언트에 노출되지 않음.** 모든 서명은 `lib/xrpl.ts`를 호출하는 API route에서 수행, seed는 환경변수.
 
+## Vercel 배포
+
+KFIP Milgram 페이지에 임베드할 라이브 URL을 만드는 과정입니다.
+
+### 1. GitHub 리포 만들고 푸시
+
+```bash
+# GitHub에서 jamy3251/kfip-xrpl 같은 빈 리포 만든 뒤
+git remote add origin https://github.com/jamy3251/kfip-xrpl.git
+git push -u origin master
+```
+
+### 2. Vercel import
+
+https://vercel.com/new 에서 위 리포 import. Framework은 자동 감지(Next.js). `vercel.json`이 빌드 명령(`bun run build`)과 지역(`icn1` 서울)을 명시합니다.
+
+### 3. Environment Variables
+
+Vercel 대시보드 → Project Settings → Environment Variables. **로컬에서 `bun run setup:wallets` 한 번 돌려 5줄 출력**한 뒤 그 값을 Production + Preview + Development 모두에 추가:
+
+```
+KFIP_PARENT_SEED
+KFIP_PARENT_ADDRESS
+KFIP_CHILD_SEED
+KFIP_CHILD_ADDRESS
+KFIP_MERCHANT_ADDRESS
+```
+
+⚠️ 이 seed는 testnet 전용이라 노출돼도 실손해는 없지만, 다른 사람이 데모를 망가뜨릴 수 있으니 production만 쓰는 게 안전합니다. 마감 후 새 seed 발급 권장.
+
+### 4. 배포 후
+
+자동 도메인: `https://kfip-xrpl-jamy3251.vercel.app` 비슷한 형태.
+- 사용자 정의 도메인을 원하면 Vercel → Settings → Domains에서 추가.
+- KFIP 마감 단계는 vercel 서브도메인으로 충분.
+
+### 5. Milgram 임베드
+
+KFIP 프로젝트 소개 페이지에 위 URL을 iframe 또는 링크로 삽입.
+
 ## 로드맵
 
-- **v0.1 (현재)** — UI 스켈레톤 + 디자인 시스템 + 컴파일 클린
-- **v0.2** — XRPL 테스트넷 실제 연결: EscrowCreate (부모) → EscrowFinish (자녀) 라운드트립
-- **v0.3** — Hero 터미널 라이브 데이터, QR 결제 mock 가맹점, 잔액 polling
-- **v0.4** — 시연 영상 녹화, Vercel 배포, Milgram 페이지 임베드
-- **post-KFIP** — 베트남 측 합법 진입 채널 (Remitano 등) 파트너십, KYC, 모바일 네이티브
+- **v0.1** — UI 스켈레톤 + 디자인 시스템 + 컴파일 클린 ✓
+- **v0.2** — XRPL 테스트넷 EscrowCreate → EscrowFinish → Payment 3-tx 라운드트립 ✓
+- **v0.3 (현재)** — Live hero terminal (실 XRPL 폴링), CoinGecko 환율 oracle, Vercel 배포 준비, 유닛 테스트 ✓
+- **v0.4** — QR 결제 mock 가맹점, 모바일 폴리시, 시연 영상 녹화
+- **v0.5** — KV 마이그레이션 (서버리스 cold-start 대응), 멀티 escrow
+- **post-KFIP** — 베트남 측 합법 진입 채널 파트너십, KYC, 모바일 네이티브
 
 ## KFIP 지원 산출물
 

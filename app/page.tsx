@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HeroTerminal from "./components/HeroTerminal";
 
 export default function HomePage() {
   return (
@@ -85,60 +86,6 @@ function Microcopy() {
       <span>· 3초 전</span>
     </div>
   );
-}
-
-function HeroTerminal() {
-  return (
-    <div className="overflow-hidden rounded-card border border-border bg-muted text-[13px] shadow-[0_12px_32px_rgba(10,10,10,0.04)]">
-      <div className="flex items-center gap-2 border-b border-border bg-[#f4f6f8] px-4 py-2.5 text-[10.5px] font-semibold uppercase tracking-wider text-text-subtle">
-        <span className="block h-[9px] w-[9px] rounded-full bg-[#ff6b6b]" />
-        <span className="block h-[9px] w-[9px] rounded-full bg-[#feca57]" />
-        <span className="block h-[9px] w-[9px] rounded-full bg-[#1dd1a1]" />
-        <span className="ml-auto">xrpl.testnet · live</span>
-      </div>
-      <div className="px-4 py-5 font-mono text-[12.5px] leading-[1.85] text-[#3a4250]">
-        <Line t="14:23:01">
-          <span className="font-semibold text-accent-dark">EscrowCreate</span>{" "}
-          <Dim>·</Dim> from:rPa…K9x <Dim>·</Dim>{" "}
-          <span className="font-semibold text-[#b88200]">200,000 KRW</span>
-        </Line>
-        <Line t="14:23:04">
-          <span className="font-semibold text-accent-dark">EscrowFinish</span>{" "}
-          <Dim>·</Dim> to:rHQ…M7b <Dim>·</Dim> condition:✓
-        </Line>
-        <Line t="14:23:04">
-          <span className="text-success">{`  └ settled · 3.2s · gas: 0.00001 XRP`}</span>
-        </Line>
-        <Line t="14:23:04">
-          <span className="text-highlight break-all">{`  └ tx: 7E5A…B4A2C9F1D8`}</span>
-        </Line>
-        <Line t="14:23:05">
-          <span className="font-semibold text-accent-dark">Payment</span>{" "}
-          <Dim>·</Dim> dst:merchant_kr <Dim>·</Dim>{" "}
-          <span className="font-semibold text-[#b88200]">15,000 KRW</span>
-        </Line>
-        <Line t="14:23:05">
-          <span className="text-success">{`  └ ✓ 185,000 KRW remaining`}</span>
-        </Line>
-        <Line t="14:23:08">
-          <Dim>$ awaiting next tx_</Dim>
-        </Line>
-      </div>
-    </div>
-  );
-}
-
-function Line({ t, children }: { t: string; children: React.ReactNode }) {
-  return (
-    <div className="flex gap-3.5">
-      <span className="w-[60px] shrink-0 text-text-subtle">{t}</span>
-      <span>{children}</span>
-    </div>
-  );
-}
-
-function Dim({ children }: { children: React.ReactNode }) {
-  return <span className="text-text-subtle">{children}</span>;
 }
 
 function MetricRow() {

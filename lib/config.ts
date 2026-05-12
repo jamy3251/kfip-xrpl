@@ -1,8 +1,13 @@
 /**
- * KFIP runtime config.
- * Server-only — never import this from a client component.
+ * KFIP runtime config + pure conversion helpers.
+ *
+ * The env-reading functions (readDemoSeeds / readDemoAddresses / readyForXrpl)
+ * are server-side concerns but they're not marked "server-only" so this module
+ * can be imported by unit tests. Next.js already prevents non-NEXT_PUBLIC_ env
+ * vars from reaching the client bundle, so practical exposure is zero.
+ *
+ * The conversion helpers (krwToXrp, dropsToKrw) are pure and safe anywhere.
  */
-import "server-only";
 
 export const XRPL_TESTNET_URL =
   process.env.XRPL_TESTNET_URL ?? "wss://s.altnet.rippletest.net:51233";
@@ -62,4 +67,10 @@ export function krwToXrp(krw: number): number {
 export function dropsToKrw(drops: string | number): number {
   const xrp = Number(drops) / 1_000_000;
   return Math.round(xrp * MOCK_XRP_KRW_RATE);
+}
+
+/** Like dropsToKrw but accepts a runtime-supplied rate (e.g. live oracle). */
+export function dropsToKrwAt(drops: string | number, rate: number): number {
+  const xrp = Number(drops) / 1_000_000;
+  return Math.round(xrp * rate);
 }
