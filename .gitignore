@@ -54,3 +54,8 @@ next-env.d.ts
 
 # local demo state (persisted across `bun dev` restarts, not committed)
 .kfip-state.json
+
+# ad-hoc screenshots / scratch files at repo root
+/asdf.png
+/제목 없음.png
+*.scratch.*
