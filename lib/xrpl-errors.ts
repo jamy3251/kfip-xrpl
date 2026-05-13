@@ -14,6 +14,11 @@ const ENGINE_RESULT_KO: Record<string, string> = {
   tecINSUFFICIENT_RESERVE:
     "XRP 잔액이 Account Reserve 아래로 떨어집니다. setup:wallets로 새로 funding하세요.",
   tecINSUFFICIENT_FUNDS: "잔액 부족 — Escrow에 넣을 XRP가 모자랍니다.",
+  tecUNFUNDED:
+    "잔액이 Reserve 미만으로 떨어집니다 (base 10 XRP + owner 2 XRP per object). `bun run topup`으로 부모 지갑 충전하거나 더 작은 금액 시도.",
+  tecUNFUNDED_PAYMENT:
+    "결제 금액 보내고 나면 Reserve 미만. `bun run topup` 또는 더 작은 결제.",
+  tecUNFUNDED_OFFER: "Offer 잔액 부족.",
   tecPATH_DRY: "결제 경로에 유동성이 없습니다.",
   tecNO_PERMISSION: "권한 없음.",
   tecNO_AUTH: "수신자가 발행자 승인을 받지 않았습니다.",
